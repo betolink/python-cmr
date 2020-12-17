@@ -10,14 +10,14 @@ class TestCollectionClass(unittest.TestCase):
 
         self.assertIn("archive_center", query.params)
         self.assertEqual(query.params["archive_center"], "LP DAAC")
-    
+
     def test_keyword(self):
         query = CollectionQuery()
         query.keyword("AST_*")
 
         self.assertIn("keyword", query.params)
         self.assertEqual(query.params["keyword"], "AST_*")
-    
+
     def test_valid_formats(self):
         query = CollectionQuery()
         formats = [
@@ -28,7 +28,7 @@ class TestCollectionClass(unittest.TestCase):
         for _format in formats:
             query.format(_format)
             self.assertEqual(query._format, _format)
-    
+
     def test_invalid_format(self):
         query = CollectionQuery()
 
@@ -36,22 +36,22 @@ class TestCollectionClass(unittest.TestCase):
             query.format("invalid")
             query.format("jsonn")
             query.format("iso19116")
-    
+
     def test_valid_concept_id(self):
         query = CollectionQuery()
 
         query.concept_id("C1299783579-LPDAAC_ECS")
         self.assertEqual(query.params["concept_id"], ["C1299783579-LPDAAC_ECS"])
-        
+
         query.concept_id(["C1299783579-LPDAAC_ECS", "C1441380236-PODAAC"])
         self.assertEqual(query.params["concept_id"], ["C1299783579-LPDAAC_ECS", "C1441380236-PODAAC"])
-    
+
     def test_invalid_concept_id(self):
         query = CollectionQuery()
 
         with self.assertRaises(ValueError):
             query.concept_id("G1327299284-LPDAAC_ECS")
-        
+
         with self.assertRaises(ValueError):
             query.concept_id(["C1299783579-LPDAAC_ECS", "G1327299284-LPDAAC_ECS"])
 

@@ -10,7 +10,8 @@ except ImportError:
 from datetime import datetime
 from inspect import getmembers, ismethod
 from re import search
-from requests import get, exceptions
+from requests import session, exceptions
+from requests.auth import HTTPBasicAuth
 
 CMR_OPS = "https://cmr.earthdata.nasa.gov/search/"
 CMR_UAT = "https://cmr.uat.earthdata.nasa.gov/search/"
@@ -29,11 +30,36 @@ class Query(object):
         "csv", "atom", "kml", "native"
     ]
 
-    def __init__(self, route, mode=CMR_OPS):
+    def __init__(self, route, mode=CMR_OPS, credentials=None):
         self.params = {}
         self.options = {}
         self._route = route
+        self._token = None
         self.mode(mode)
+        self.session = session()
+        if credentials is not None:
+            username = credentials['username']
+            password = credentials['password']
+            _TOKEN_DATA = ('<token>'
+                             '<username>%s</username>'
+                             '<password>%s</password>'
+                             '<client_id>CMR Client</client_id>'
+                             '<user_ip_address>%s</user_ip_address>'
+                           '</token>'
+                           )
+            my_ip = self.session.get('https://ipinfo.io/ip').text.strip()
+            auth_url = 'https://cmr.earthdata.nasa.gov/legacy-services/rest/tokens'
+            auth_cred = HTTPBasicAuth(credentials['username'], credentials['password'])
+            auth_resp = self.session.post(auth_url,
+                                        auth=auth_cred,
+                                        data=_TOKEN_DATA % (str(username), str(password), my_ip),
+                                        headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
+                                        timeout=10)
+            if not (auth_resp.ok):  # type: ignore
+                print(nsidc_resp.url)
+                print(f'Authentication with Earthdata Login failed with:\n{auth_resp.text}')
+                return None
+            self._token = auth_resp.json()['token']['id']
 
     def get(self, limit=2000):
         """
@@ -49,8 +75,11 @@ class Query(object):
         results = []
         page = 1
         while len(results) < limit:
+            params = {'page_size': page_size, 'page_num': page}
+            if self._token is not None:
+                params['token'] = self._token
 
-            response = get(url, params={'page_size': page_size, 'page_num': page})
+            response = self.session.get(url, params=params)
 
             try:
                 response.raise_for_status()
@@ -79,8 +108,11 @@ class Query(object):
         """
 
         url = self._build_url()
+        params = {'page_size': 0}
+        if self._token is not None:
+            params['token'] = self._token
 
-        response = get(url, params={'page_size': 0})
+        response = self.session.get(url, params=params)
 
         try:
             response.raise_for_status()
@@ -287,7 +319,7 @@ class Query(object):
 
         if not coordinates:
             return self
-    
+
         # make sure we were passed something iterable
         try:
             iter(coordinates)
@@ -346,7 +378,7 @@ class Query(object):
 
         if not coordinates:
             return self
-        
+
         # make sure we were passed something iterable
         try:
             iter(coordinates)
@@ -380,11 +412,11 @@ class Query(object):
 
         if not isinstance(downloadable, bool):
             raise TypeError("Downloadable must be of type bool")
-        
+
         # remove the inverse flag so CMR doesn't crash
         if "online_only" in self.params:
             del self.params["online_only"]
-        
+
         self.params['downloadable'] = downloadable
 
         return self
@@ -486,8 +518,8 @@ class GranuleQuery(Query):
     Class for querying granules from the CMR.
     """
 
-    def __init__(self, mode=CMR_OPS):
-        Query.__init__(self, "granules", mode)
+    def __init__(self, mode=CMR_OPS, credentials=None):
+        Query.__init__(self, "granules", mode, credentials)
 
     def orbit_number(self, orbit1, orbit2=None):
         """"
@@ -607,7 +639,7 @@ class GranuleQuery(Query):
 
         if isinstance(IDs, str):
             IDs = [IDs]
-        
+
         self.params["concept_id"] = IDs
 
         return self
@@ -631,8 +663,8 @@ class CollectionQuery(Query):
     Class for querying collections from the CMR.
     """
 
-    def __init__(self, mode=CMR_OPS):
-        Query.__init__(self, "collections", mode)
+    def __init__(self, mode=CMR_OPS, credentials=None):
+        Query.__init__(self, "collections", mode, credentials)
 
         self._valid_formats_regex.extend([
             "dif", "dif10", "opendata", "umm_json", "umm_json_v[0-9]_[0-9]"
