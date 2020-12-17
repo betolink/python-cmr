@@ -48,7 +48,7 @@ class Query(object):
                            '</token>'
                            )
             my_ip = self.session.get('https://ipinfo.io/ip').text.strip()
-            auth_url = 'https://cmr.earthdata.nasa.gov/legacy-services/rest/tokens'
+            auth_url = mode.replace('search', 'legacy-services/rest/tokens')
             auth_cred = HTTPBasicAuth(credentials['username'], credentials['password'])
             auth_resp = self.session.post(auth_url,
                                         auth=auth_cred,
