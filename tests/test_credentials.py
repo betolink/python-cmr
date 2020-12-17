@@ -35,5 +35,3 @@ class TestCollectionClass(unittest.TestCase):
 
         collection = c_auth_query.concept_id(['C1938032626-POCLOUD'])
         self.assertEqual(1, collection.hits())
-
-

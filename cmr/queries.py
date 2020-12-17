@@ -48,7 +48,7 @@ class Query(object):
                            '</token>'
                            )
             my_ip = self.session.get('https://ipinfo.io/ip').text.strip()
-            auth_url = mode.replace('search', 'legacy-services/rest/tokens')
+            auth_url = mode.replace('search/', 'legacy-services/rest/tokens')
             auth_cred = HTTPBasicAuth(credentials['username'], credentials['password'])
             auth_resp = self.session.post(auth_url,
                                         auth=auth_cred,
@@ -56,7 +56,6 @@ class Query(object):
                                         headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
                                         timeout=10)
             if not (auth_resp.ok):  # type: ignore
-                print(nsidc_resp.url)
                 print(f'Authentication with Earthdata Login failed with:\n{auth_resp.text}')
                 return None
             self._token = auth_resp.json()['token']['id']
