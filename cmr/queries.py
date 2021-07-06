@@ -30,16 +30,14 @@ class Query(object):
         "csv", "atom", "kml", "native"
     ]
 
-    def __init__(self, route, mode=CMR_OPS, credentials=None):
+    def __init__(self, route, mode=CMR_OPS, username, password):
         self.params = {}
         self.options = {}
         self._route = route
         self._token = None
         self.mode(mode)
         self.session = session()
-        if credentials is not None:
-            username = credentials['username']
-            password = credentials['password']
+        if username is not None and password is not None:
             _TOKEN_DATA = ('<token>'
                              '<username>%s</username>'
                              '<password>%s</password>'
@@ -49,12 +47,12 @@ class Query(object):
                            )
             my_ip = self.session.get('https://ipinfo.io/ip').text.strip()
             auth_url = mode.replace('search/', 'legacy-services/rest/tokens')
-            auth_cred = HTTPBasicAuth(credentials['username'], credentials['password'])
+            auth_cred = HTTPBasicAuth(username, password)
             auth_resp = self.session.post(auth_url,
-                                        auth=auth_cred,
-                                        data=_TOKEN_DATA % (str(username), str(password), my_ip),
-                                        headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
-                                        timeout=10)
+                                          auth=auth_cred,
+                                          data=_TOKEN_DATA % (str(username), str(password), my_ip),
+                                          headers={'Content-Type': 'application/xml', 'Accept': 'application/json'},
+                                          timeout=10)
             if not (auth_resp.ok):  # type: ignore
                 print(f'Authentication with Earthdata Login failed with:\n{auth_resp.text}')
                 return None
@@ -709,12 +707,10 @@ class CollectionQuery(Query):
 
         if isinstance(IDs, str):
             IDs = [IDs]
-        
         # verify we weren't provided any granule concept IDs
         for ID in IDs:
             if ID.strip()[0] != "C":
                 raise ValueError("Only collection concept ID's can be provided (begin with 'C'): {}".format(ID))
-        
         self.params["concept_id"] = IDs
 
         return self
